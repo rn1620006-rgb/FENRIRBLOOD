@@ -36,7 +36,7 @@ async def validation_error(request:Request,exc:RequestValidationError):
 @app.middleware("http")
 async def security_headers(request,call_next):
     # Fail closed: Vercel cannot persist SQLite data. Prevent account/data loss.
-    if config.ON_VERCEL and request.method not in ("GET", "HEAD", "OPTIONS"):
+    if config.ON_VERCEL and not config.DATABASE_URL and request.method not in ("GET", "HEAD", "OPTIONS"):
         return JSONResponse(status_code=503, content={"detail": "A base de dados persistente ainda não está configurada. Esta instalação no Vercel está em modo de visualização, sem registo nem alterações."})
     response=await call_next(request)
     response.headers["X-Content-Type-Options"]="nosniff"

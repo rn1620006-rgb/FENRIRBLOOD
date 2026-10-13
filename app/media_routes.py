@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 from . import config
 from .core import auth,error,audit
-from .db import transaction,one
+from .db import transaction,one,is_postgres
 from .security import now,uid
 
 router=APIRouter(prefix="/api/media",tags=["media"])
@@ -46,9 +46,12 @@ async def upload(request:Request,file:UploadFile=File(...)):
         daily=db.execute("SELECT COUNT(*) AS c FROM media WHERE uploader_id=? AND created_at>?",(actor["id"],cutoff)).fetchone()["c"]
         if daily>=20:error("Limite de 20 imagens por dia atingido",429)
         try:
-            path.write_bytes(result)
+            if not is_postgres():
+                path.write_bytes(result)
             db.execute("INSERT INTO media(id,uploader_id,file_name,bytes,width,height,created_at) VALUES(?,?,?,?,?,?,?)",
                        (media_id,actor["id"],safe_name,len(result),width,height,now()))
+            if is_postgres():
+                db.execute("INSERT INTO media_blobs(media_id,data) VALUES(?,?)", (media_id,result))
             audit(db,actor["id"],"UPLOAD_MEDIA","media",media_id,{"bytes":len(result)})
         except Exception:
             path.unlink(missing_ok=True)
@@ -61,6 +64,10 @@ def access_media(media_id:str,request:Request):
     media=one("SELECT * FROM media WHERE id=?",(media_id,))
     if not media:error("Imagem não encontrada",404)
     # No arbitrary filename is accepted. Files are available only to approved members.
+    if is_postgres():
+        blob=one("SELECT data FROM media_blobs WHERE media_id=?",(media_id,))
+        if not blob:error("Imagem indisponível",404)
+        return Response(content=bytes(blob["data"]),media_type="image/webp",headers={"Cache-Control":"private, max-age=60"})
     file_path=config.DB_PATH.parent / "uploads" / media["file_name"]
     if not file_path.is_file():error("Imagem temporariamente indisponível",404)
     return FileResponse(file_path,media_type="image/webp",headers={"Cache-Control":"private, max-age=60"})

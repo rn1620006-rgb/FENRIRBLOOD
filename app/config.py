@@ -12,3 +12,9 @@ SECURE_COOKIES = os.getenv("FENRIR_SECURE_COOKIES", "true" if ON_VERCEL else "fa
 PUBLIC_URL = os.getenv("FENRIR_PUBLIC_URL", "https://fenrirblood.vercel.app" if ON_VERCEL else "http://127.0.0.1:8000").rstrip("/")
 ALLOWED_ORIGINS = set(filter(None, (x.strip().rstrip("/") for x in os.getenv("FENRIR_ALLOWED_ORIGINS", "").split(","))))
 SESSION_DAYS = max(1, min(int(os.getenv("FENRIR_SESSION_DAYS", "7")), 30))
+
+# PostgreSQL in production, SQLite for local development/tests.
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_SCHEMA = os.getenv("FENRIR_DATABASE_SCHEMA", "public").strip()
+if not DATABASE_SCHEMA.isidentifier():
+    raise ValueError("Nome de esquema PostgreSQL inválido")

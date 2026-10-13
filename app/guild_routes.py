@@ -1,4 +1,8 @@
 import sqlite3
+try:
+    from psycopg import IntegrityError as PgIntegrityError
+except ImportError:
+    PgIntegrityError = sqlite3.IntegrityError
 from datetime import datetime,timezone,timedelta
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
@@ -129,7 +133,7 @@ def create_team(data:TeamCreate,request:Request):
             db.execute("INSERT INTO teams(id,name,created_at,adaptation_end_at) VALUES(?,?,?,?)",
                        (tid,data.name.strip(),now(),(datetime.now(timezone.utc)+timedelta(days=14)).isoformat(timespec="seconds")))
             audit(db,actor["id"],"CREATE_TEAM","team",tid,{"name":data.name})
-    except sqlite3.IntegrityError:
+    except (sqlite3.IntegrityError, PgIntegrityError):
         error("Já existe uma equipa com este nome",409)
     return {"id":tid}
 
