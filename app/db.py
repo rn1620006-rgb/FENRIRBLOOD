@@ -30,6 +30,9 @@ def connect():
             connect_timeout=8,
             options="-c search_path=" + config.DATABASE_SCHEMA,
         )
+        # Set up an isolated application schema on new Neon databases.
+        from psycopg import sql as pgsql
+        raw.execute(pgsql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(pgsql.Identifier(config.DATABASE_SCHEMA)))
         return PGConnection(raw)
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(config.DB_PATH, timeout=12, isolation_level=None, check_same_thread=False)
