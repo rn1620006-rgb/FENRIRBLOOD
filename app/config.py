@@ -14,7 +14,7 @@ ALLOWED_ORIGINS = set(filter(None, (x.strip().rstrip("/") for x in os.getenv("FE
 SESSION_DAYS = max(1, min(int(os.getenv("FENRIR_SESSION_DAYS", "7")), 30))
 
 # PostgreSQL in production, SQLite for local development/tests.
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_URL = (os.getenv("DATABASE_URL_UNPOOLED") or os.getenv("DATABASE_URL") or "").strip()
 DATABASE_SCHEMA = os.getenv("FENRIR_DATABASE_SCHEMA", "public").strip()
 if not DATABASE_SCHEMA.isidentifier():
     raise ValueError("Nome de esquema PostgreSQL inválido")
